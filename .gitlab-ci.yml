@@ -1,0 +1,74 @@
+stages:
+  - build
+  - code-style
+  - tests
+  - deploy
+
+build-cat:
+  stage: build
+  script:
+  - make -C $CI_PROJECT_DIR/src/C3_SimpleBashUtils/src/cat
+  - cp $CI_PROJECT_DIR/src/C3_SimpleBashUtils/src/cat/s21_cat $CI_PROJECT_DIR/src/build
+  artifacts:
+    paths:
+      - src/build/
+    expire_in: 30 days
+  after_script:
+    - bash src/notification.sh
+
+
+build-grep:
+  stage: build
+  script:
+   - make -C $CI_PROJECT_DIR/src/C3_SimpleBashUtils/src/grep
+   - cp $CI_PROJECT_DIR/src/C3_SimpleBashUtils/src/grep/s21_grep $CI_PROJECT_DIR/src/build
+  artifacts:
+    paths:
+      - src/build/
+    expire_in: 30 days
+  after_script:
+    - bash src/notification.sh
+  
+
+code-style:
+  stage: code-style
+  script:
+   - cp $CI_PROJECT_DIR/materials/linters/.clang-format $CI_PROJECT_DIR/src/C3_SimpleBashUtils/src/cat/
+   - clang-format -n --Werror --verbose $CI_PROJECT_DIR/src/C3_SimpleBashUtils/src/cat/*.c
+   - cp $CI_PROJECT_DIR/materials/linters/.clang-format $CI_PROJECT_DIR/src/C3_SimpleBashUtils/src/grep/
+   - clang-format -n --Werror --verbose $CI_PROJECT_DIR/src/C3_SimpleBashUtils/src/grep/*.c
+  after_script:
+    - bash src/notification.sh
+   
+
+
+test-cat:
+  stage: tests
+  script:
+   - bash $CI_PROJECT_DIR/src/tests/cat/test_cat.sh
+  dependencies:
+    - build-cat
+  after_script:
+    - bash src/notification.sh
+
+test-grep:
+  stage: tests
+  script:
+   - bash $CI_PROJECT_DIR/src/tests/grep/test_grep.sh
+  dependencies:
+    - build-grep
+  after_script:
+    - bash src/notification.sh
+
+deploy:
+  stage: deploy
+  when: manual
+  dependencies:
+    - build-cat
+    - build-grep
+  script:
+    - bash src/deploy.sh
+  allow_failure: false
+  after_script:
+    - bash src/notification.sh
+    
